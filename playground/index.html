@@ -12,6 +12,9 @@
 
       #canvas {
           position: absolute;
+          /* Keep this on top or below depending on UI, 
+             but let's ensure the control panel stays clickable */
+          z-index: 1;
       }
 
       #control {
@@ -20,12 +23,32 @@
           left: 24px;
           color: #fff;
           font-size: 18px;
+          z-index: 10; /* Forces your controls to sit on top of the canvas */
+      }
+
+      /* Quick styling for your speech button */
+      .speech-btn {
+          padding: 8px 16px;
+          font-size: 14px;
+          font-weight: bold;
+          color: #fff;
+          background-color: #ff4a5a;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background 0.2s;
+      }
+      .speech-btn:hover {
+          background-color: #ff3344;
       }
   </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
-<div id="control"></div>
+
+<div id="control">
+</div>
+
 <script src="/core/live2d.min.js"></script>
 <script src="/core/live2dcubismcore.js"></script>
 <script src="/playground/index.ts" type="module"></script>
