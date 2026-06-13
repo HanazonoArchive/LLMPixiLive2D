@@ -5,6 +5,9 @@ export class Live2DAudioQueueManager {
     private queue: AudioBuffer[] = [];
     private isPlaying: boolean = false;
     private currentSource: AudioBufferSourceNode | null = null;
+    // 🔇 Silent sustain tone — keeps AudioContext warm & tab icon always visible (YouTube pattern)
+    private sustainSource: AudioBufferSourceNode | null = null;
+    private sustainGain: GainNode | null = null;
     
     public onPlaybackStarted: () => void = () => {};
     public onPlaybackEnded: () => void = () => {};
@@ -12,6 +15,38 @@ export class Live2DAudioQueueManager {
     constructor(audioContext: AudioContext, analyser: AnalyserNode) {
         this.audioContext = audioContext;
         this.analyser = analyser;
+        this.startSilentSustain();
+    }
+
+    /**
+     * 🔇 Starts an inaudible looping silence that keeps the AudioContext in
+     * "running" state permanently. This:
+     *   - Eliminates the static burst on first real audio playback (cold-start fix)
+     *   - Keeps the browser tab audio indicator always visible (YouTube pattern)
+     *   - Prevents AudioContext state transitions which can cause glitching
+     */
+    private startSilentSustain(): void {
+        const sampleRate = this.audioContext.sampleRate;
+        // 0.5s of silence — all zeros by default
+        const silentBuffer = this.audioContext.createBuffer(1, Math.floor(sampleRate * 0.5), sampleRate);
+
+        this.sustainGain = this.audioContext.createGain();
+        this.sustainGain.gain.value = 0; // 🔇 Absolutely silent
+
+        this.sustainSource = this.audioContext.createBufferSource();
+        this.sustainSource.buffer = silentBuffer;
+        this.sustainSource.loop = true;
+        this.sustainSource.connect(this.sustainGain);
+        this.sustainGain.connect(this.analyser);
+        this.sustainSource.start(0);
+
+        // Resume context if it's still suspended — needed when sustain starts
+        // before a user gesture has fully propagated to the AudioContext.
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => {});
+        }
+
+        console.log("🔇 Silent audio sustain started — AudioContext is now permanently warmed up.");
     }
 
     /**
